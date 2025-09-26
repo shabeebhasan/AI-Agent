@@ -1,0 +1,96 @@
+{
+  "name": "AI Email Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-email-agent"
+      },
+      "id": "Webhook_Trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/run",
+        "method": "POST",
+        "sendBody": true,
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "bodyParametersJson": "{\n  \"provider\": \"gmail\"\n}"
+      },
+      "id": "FastAPI_Request",
+      "name": "Invoke Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#executive-ops",
+        "message": "{{ $json[\"result\"] }}"
+      },
+      "id": "Slack_Notify",
+      "name": "Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [760, 180]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "Tasks",
+        "fields": {
+          "properties": {
+            "Name": [
+              {
+                "text": {
+                  "content": "Follow up on {{ $json[\"action\"] }}"
+                }
+              }
+            ],
+            "Status": "In Progress"
+          }
+        }
+      },
+      "id": "Notion_Task",
+      "name": "Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [760, 420]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Invoke Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoke Agent": {
+      "main": [
+        [
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
